@@ -40,39 +40,41 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import xyz.tgscan.domain.Room;
 import xyz.tgscan.domain.RoomDoc;
+import xyz.tgscan.enums.TgRoomStatusEnum;
 import xyz.tgscan.repository.RoomDocRepository;
 import xyz.tgscan.repository.RoomRepository;
 
 @Component
 @Slf4j
 public class RoomCrawlJob {
-  //  private static final ArrayBlockingQueue<String> proxyQ = new ArrayBlockingQueue<>(50);
-  private static final String PROXY_URL =
-      "https://tq.lunaproxy.com/getflowip?neek=1029717&num=50&type=2&sep=1&regions=all&ip_si=1&level=1&sb=";
-  private final Retryer<String> retryer =
-      RetryerBuilder.<String>newBuilder()
-          .retryIfExceptionOfType(IOException.class)
-          .withStopStrategy(StopStrategies.stopAfterAttempt(5))
-          .build();
+  // private static final ArrayBlockingQueue<String> proxyQ = new
+  // ArrayBlockingQueue<>(50);
+  private static final String PROXY_URL = "https://tq.lunaproxy.com/getflowip?neek=1029717&num=50&type=2&sep=1&regions=all&ip_si=1&level=1&sb=";
+  private final Retryer<String> retryer = RetryerBuilder.<String>newBuilder()
+      .retryIfExceptionOfType(IOException.class)
+      .withStopStrategy(StopStrategies.stopAfterAttempt(5))
+      .build();
   private final CloseableHttpClient client = HttpClients.custom().setMaxConnTotal(50).build();
   private final ThreadLocal<String> proxyWrap = new ThreadLocal<>();
-  private final ThreadPoolExecutor pool =
-      new ThreadPoolExecutor(
-          150,
-          150,
-          0L,
-          TimeUnit.MILLISECONDS,
-          new ArrayBlockingQueue<>(1024),
-          new ThreadFactoryBuilder().setNameFormat("crawler-%d").build(),
-          new ThreadPoolExecutor.CallerRunsPolicy());
+  private final ThreadPoolExecutor pool = new ThreadPoolExecutor(
+      150,
+      150,
+      0L,
+      TimeUnit.MILLISECONDS,
+      new ArrayBlockingQueue<>(1024),
+      new ThreadFactoryBuilder().setNameFormat("crawler-%d").build(),
+      new ThreadPoolExecutor.CallerRunsPolicy());
 
   @Value("${crawler.room.enable}")
   private boolean enable;
 
   private volatile boolean rescan = false;
-  @Autowired private RoomRepository roomRepository;
-  @Autowired private RoomDocRepository roomDocRepository;
-  @Autowired private Environment environment;
+  @Autowired
+  private RoomRepository roomRepository;
+  @Autowired
+  private RoomDocRepository roomDocRepository;
+  @Autowired
+  private Environment environment;
 
   public static void main(String[] args) throws IOException {
     var roomCrawlJob = new RoomCrawlJob();
@@ -116,32 +118,32 @@ public class RoomCrawlJob {
 
   @PostConstruct
   public void init() {
-    //    new Thread(
-    //            () -> {
-    //              while (true) {
-    //                if (!enable && !rescan) {
-    //                  try {
-    //                    TimeUnit.SECONDS.sleep(5);
-    //                  } catch (InterruptedException e) {
-    //                    throw new RuntimeException(e);
-    //                  }
-    //                  continue;
-    //                }
-    //                List<String> proxy = getProxy();
-    //                for (String s : proxy) {
-    //                  if (StringUtils.isEmpty(s)) {
-    //                    log.error("proxy is empty:{}", s);
-    //                  } else {
-    //                    proxyQ.offer(s);
-    //                  }
-    //                }
-    //              }
-    //            })
-    //        .start();
+    // new Thread(
+    // () -> {
+    // while (true) {
+    // if (!enable && !rescan) {
+    // try {
+    // TimeUnit.SECONDS.sleep(5);
+    // } catch (InterruptedException e) {
+    // throw new RuntimeException(e);
+    // }
+    // continue;
+    // }
+    // List<String> proxy = getProxy();
+    // for (String s : proxy) {
+    // if (StringUtils.isEmpty(s)) {
+    // log.error("proxy is empty:{}", s);
+    // } else {
+    // proxyQ.offer(s);
+    // }
+    // }
+    // }
+    // })
+    // .start();
   }
 
   private boolean isLocal() {
-    return Arrays.asList(environment.getActiveProfiles()).contains("dev");
+    return Arrays.asList(environment.getActiveProfiles()).contains("local");
   }
 
   private List<String> getProxy() {
@@ -154,16 +156,13 @@ public class RoomCrawlJob {
         ObjectMapper objectMapper = new ObjectMapper();
         Map map = objectMapper.readValue(s, Map.class);
         Object data = map.get("data");
-        List<String> collect =
-            (List<String>)
-                ((ArrayList) data)
-                    .stream()
-                        .map(
-                            x ->
-                                ((Map) x).get("ip").toString()
-                                    + ":"
-                                    + ((Map) x).get("port").toString())
-                        .collect(Collectors.toList());
+        List<String> collect = (List<String>) ((ArrayList) data)
+            .stream()
+            .map(
+                x -> ((Map) x).get("ip").toString()
+                    + ":"
+                    + ((Map) x).get("port").toString())
+            .collect(Collectors.toList());
         return collect;
       } catch (Exception e) {
 
@@ -189,58 +188,35 @@ public class RoomCrawlJob {
 
   private void parseAndSave(Room room, String s) {
     Document doc = Jsoup.parse(s);
-    Optional<String> src =
-        doc
-            .select(
-                "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_photo > a > img")
-            .stream()
-            .findFirst()
-            .map(x -> x.attr("src"));
+    Optional<String> src = doc
+        .select(
+            "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_photo > a > img")
+        .stream()
+        .findFirst()
+        .map(x -> x.attr("src"));
 
-    String name =
-        doc.select(
-                "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_title > span")
-            .get(0)
-            .text();
+    String name = doc.select(
+        "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_title > span")
+        .get(0)
+        .text();
     String desc = null;
     try {
-      desc =
-          doc.select(
-                  "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_description")
-              .get(0)
-              .text();
+      desc = doc.select(
+          "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_description")
+          .get(0)
+          .text();
     } catch (Exception e) {
       log.error("desc parse err");
     }
 
-    String statiscs =
-        doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_extra")
-            .get(0)
-            .text();
+    String statiscs = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_extra")
+        .get(0)
+        .text();
     room.setName(name);
     room.setJhiDesc(desc);
     room.setStatus("COLLECTED");
     room.setCollectedAt(Timestamp.valueOf(LocalDateTime.now()));
-    src.ifPresent(
-        icon -> {
-          try {
-            retryer.call(
-                () -> {
-                  var split = room.getLink().split("/");
-                  try {
-                    downloadImg(icon, "icon/" + split[split.length - 1] + ".jpg");
-
-                  } catch (IOException e) {
-
-                    log.debug("download img fail:{}", JSON.toJSONString(room), e);
-                    throw e;
-                  }
-                  return null;
-                });
-          } catch (ExecutionException | RetryException e) {
-            log.debug("download img fail:{}", JSON.toJSONString(room), e);
-          }
-        });
+    room.setIcon(src.orElse(""));
     boolean isChannel = statiscs.contains("subscriber");
     if (isChannel) {
       String subscribers = statiscs.replaceAll("subscribers", "").replaceAll("subscriber", "").replaceAll(" ", "");
@@ -271,18 +247,17 @@ public class RoomCrawlJob {
         log.info("parse member cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
       }
     }
-    boolean maybeBot =
-        doc.select(
-                "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_action > a")
-            .text()
-            .contains("Send Message");
+    boolean maybeBot = doc.select(
+        "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_action > a")
+        .text()
+        .contains("Send Message");
     if (maybeBot) {
       if (room.getLink().toLowerCase().endsWith("bot")) {
         room.setType("BOT");
-      } else{
+      } else {
         room.setType("USER");
-      } 
-      
+      }
+
       var save = roomRepository.save(room);
       roomDocRepository.save(RoomDoc.fromEntity(save));
     }
@@ -294,18 +269,19 @@ public class RoomCrawlJob {
           () -> {
             try {
               HttpGet request = new HttpGet(room.getLink());
-              //              String proxy = proxyWrap.get();
-              //              if (StringUtils.isEmpty(proxy)) {
-              //                var take = proxyQ.take();
-              //                proxyWrap.set(take);
-              //                proxy = take;
-              //              }
-              //              log.debug("use proxy:{}", proxy);
+              request.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36");
+              // String proxy = proxyWrap.get();
+              // if (StringUtils.isEmpty(proxy)) {
+              // var take = proxyQ.take();
+              // proxyWrap.set(take);
+              // proxy = take;
+              // }
+              // log.debug("use proxy:{}", proxy);
 
-              //              String[] split = proxy.split(":");
+              // String[] split = proxy.split(":");
               request.setConfig(
                   RequestConfig.custom()
-                      //                      .setProxy(new HttpHost(split[0],
+                      // .setProxy(new HttpHost(split[0],
                       // Integer.parseInt(split[1])))
                       .build());
 
@@ -317,7 +293,7 @@ public class RoomCrawlJob {
                   "download err, will retry! room:{}, err:{}",
                   JSON.toJSONString(room),
                   e.getMessage());
-              //              proxyWrap.set(proxyQ.take());
+              // proxyWrap.set(proxyQ.take());
               throw e;
             }
           });
@@ -334,8 +310,7 @@ public class RoomCrawlJob {
       int page = 0, size = 50;
       int totalPage = (int) (count / 50);
       while (true) {
-        Page<Room> rooms =
-            roomRepository.findAll(PageRequest.of(page, size, Sort.Direction.ASC, "id"));
+        Page<Room> rooms = roomRepository.findAll(PageRequest.of(page, size, Sort.Direction.ASC, "id"));
 
         submitCrawlTasks(rooms);
 
@@ -386,7 +361,8 @@ public class RoomCrawlJob {
       if (!enable) {
         return;
       }
-      Page<Room> rooms = roomRepository.findByStatusOrderByIdAsc("NEW", PageRequest.of(page, size));
+      Page<Room> rooms = roomRepository.findByStatusOrderByIdAsc(TgRoomStatusEnum.NEW.name(),
+          PageRequest.of(page, size));
 
       submitCrawlTasks(rooms);
       if (!rooms.hasNext()) {

@@ -12,8 +12,9 @@ import xyz.tgscan.repository.RoomRepository;
 
 @Slf4j
 @Component
-public class RoomFullSync extends RoomSync  {
-  @Autowired private RoomRepository tgRoomRepository;
+public class RoomFullSync extends RoomSync {
+  @Autowired
+  private RoomRepository tgRoomRepository;
 
   @SneakyThrows
   public void run(String roomIdx) {
@@ -22,8 +23,7 @@ public class RoomFullSync extends RoomSync  {
     Long lastId = 0L;
     while (true) {
       PageRequest pageRequest = PageRequest.of(page, 2500);
-      Page<Room> all =
-          tgRoomRepository.findByStatusOrderByIdAsc(TgRoomStatusEnum.COLLECTED.name(), pageRequest);
+      Page<Room> all = tgRoomRepository.findByStatusOrderByIdAsc(TgRoomStatusEnum.COLLECTED.name(), pageRequest);
       if (all.isEmpty()) {
         return;
       }

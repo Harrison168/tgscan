@@ -6,7 +6,7 @@ import lombok.*;
 import lombok.experimental.Accessors;
 
 @Entity
-@Table(name = "room", schema = "public", catalog = "demo")
+@Table(name = "room_v2", schema = "public", catalog = "demo")
 @Accessors(chain = true)
 @Getter
 @Setter
@@ -46,6 +46,10 @@ public class Room {
   @Basic
   @Column(name = "status")
   private String status;
+
+  @Basic
+  @Column(name = "icon")
+  private String icon;
 
   @Basic
   @Column(name = "collected_at")

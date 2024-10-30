@@ -16,27 +16,27 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_ELASTICSEARCH_URIS: ${SPRING_ELASTICSEARCH_URIS}
-  msg-scraper:
-    image: msg-scraper:v1.0.0
-    build:
-      context: ./msg-scraper
-      dockerfile: Dockerfile
-    network_mode: host
-    restart: always
-    environment:
-      - PHONE=${PHONE}
-      - API_HASH=${API_HASH}
-      - API_ID=${API_ID}
-      - PG_DATABASE=${PG_DATABASE}
-      - PG_USER=${PG_USER}
-      - PG_PASSWORD=${PG_PASSWORD}
-      - PG_HOST=${PG_HOST}
-      - PG_PORT=${PG_PORT}
-      - USE_PROXY=${USE_PROXY}
-      - PROXY_PASSWORD=${PROXY_PASSWORD}
-      - PROXY_USERNAME=${PROXY_USERNAME}
-      - PROXY_PORT=${PROXY_PORT}
-      - PROXY_HOST=${PROXY_HOST}
+#  msg-scraper:
+#    image: msg-scraper:v1.0.0
+#    build:
+#      context: ./msg-scraper
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    restart: always
+#    environment:
+#      - PHONE=${PHONE}
+#      - API_HASH=${API_HASH}
+#      - API_ID=${API_ID}
+#      - PG_DATABASE=${PG_DATABASE}
+#      - PG_USER=${PG_USER}
+#      - PG_PASSWORD=${PG_PASSWORD}
+#      - PG_HOST=${PG_HOST}
+#      - PG_PORT=${PG_PORT}
+#      - USE_PROXY=${USE_PROXY}
+#      - PROXY_PASSWORD=${PROXY_PASSWORD}
+#      - PROXY_USERNAME=${PROXY_USERNAME}
+#      - PROXY_PORT=${PROXY_PORT}
+#      - PROXY_HOST=${PROXY_HOST}
 
 
   web-app:

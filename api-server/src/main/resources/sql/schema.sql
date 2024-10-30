@@ -31,7 +31,8 @@ create table if not exists room_v2
     collected_at timestamp,
     lang         varchar(255),
     tags         varchar(1024),
-    extra        text
+    extra        text,
+    icon         varchar(1024)
 );
 
 alter table room_v2

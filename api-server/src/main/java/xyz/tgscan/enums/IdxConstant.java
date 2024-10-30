@@ -18,4 +18,7 @@ public class IdxConstant {
   public static final String MESSAGE_TYPE = "type";
   public static final String MESSAGE_CONTENT = "content";
   public static final String MESSAGE_CONTENT_PHRASE = "phraseContent";
+
+  public static final int PAGE_SIZE = 5;
+  public static final int HOME_RECOM_PAGE_SIZE = 12;
 }

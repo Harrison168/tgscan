@@ -31,6 +31,8 @@ public class RoomDoc {
 
   private String status;
 
+  private String icon;
+
   private Date sendTime;
 
   public static RoomDoc fromEntity(Room room) {
@@ -48,7 +50,8 @@ public class RoomDoc {
     roomDoc.setMemberCnt(room.getMemberCnt());
     roomDoc.setType(room.getType());
     roomDoc.setStatus(room.getStatus());
-    roomDoc.setSendTime(new Date(0));
+    roomDoc.setSendTime(new Date(room.getCollectedAt().getTime()));
+    roomDoc.setIcon(room.getIcon());
     return roomDoc;
   }
 }

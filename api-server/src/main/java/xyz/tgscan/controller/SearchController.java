@@ -23,16 +23,22 @@ import xyz.tgscan.service.SearchService;
 import xyz.tgscan.utils.RoomLinksUtil;
 import xyz.tgscan.utils.SearchLogUtil;
 
+import static xyz.tgscan.enums.IdxConstant.HOME_RECOM_PAGE_SIZE;
+
 @RestController
 @Slf4j
 @RequestMapping("/api/search")
 public class SearchController {
 
-  @Autowired private SearchLogUtil searchLogUtil;
-  @Autowired private HttpServletRequest request;
-  @Autowired private RoomLinksUtil roomLinksUtil;
+  @Autowired
+  private SearchLogUtil searchLogUtil;
+  @Autowired
+  private HttpServletRequest request;
+  @Autowired
+  private RoomLinksUtil roomLinksUtil;
   private HttpClient client = HttpClients.createDefault();
-  @Autowired private SearchService searchService;
+  @Autowired
+  private SearchService searchService;
 
   private String getClientIp() {
     String ip = request.getHeader("X-Forwarded-For");
@@ -64,13 +70,21 @@ public class SearchController {
     return searchService.recall(kw, page, type);
   }
 
+  @GetMapping("getById")
+  public SearchRespDTO getById(
+          @RequestParam("id") String id,
+          @RequestParam(value = "t", required = false, defaultValue = "ALL") TgRoomTypeParamEnum type) {
+
+    searchLogUtil.log(id, type.name(), null, getClientIp());
+    return searchService.getById(id, type);
+  }
+
   @SneakyThrows
   @GetMapping("autocomplete")
   public List<String> autocomplete(@RequestParam("kw") String kw) {
-    var resp =
-        client.execute(
-            new HttpGet(
-                "http://api.bing.com/qsonhs.aspx?q=" + URLPathEncoder.encodePath(kw)));
+    var resp = client.execute(
+        new HttpGet(
+            "http://api.bing.com/qsonhs.aspx?q=" + URLPathEncoder.encodePath(kw)));
     var entity = resp.getEntity();
     var string = EntityUtils.toString(entity);
     var json = JSON.parseObject(string, AutoCompleteDTO.class);
@@ -100,5 +114,11 @@ public class SearchController {
   @GetMapping("roomLinks")
   public List<Offsets> roomLinks() {
     return roomLinksUtil.roomLinks();
+  }
+
+
+  @GetMapping("recommend")
+  public SearchRespDTO getRecommendedRooms(@RequestParam(value = "p", required = false, defaultValue = "1") Integer page) {
+    return searchService.getRecommendedRooms(HOME_RECOM_PAGE_SIZE, page);
   }
 }
