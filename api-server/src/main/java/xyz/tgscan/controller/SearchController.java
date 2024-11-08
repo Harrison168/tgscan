@@ -20,6 +20,7 @@ import xyz.tgscan.domain.Offsets;
 import xyz.tgscan.dto.*;
 import xyz.tgscan.enums.TgRoomTypeParamEnum;
 import xyz.tgscan.service.SearchService;
+import xyz.tgscan.utils.NetUtil;
 import xyz.tgscan.utils.RoomLinksUtil;
 import xyz.tgscan.utils.SearchLogUtil;
 
@@ -40,25 +41,7 @@ public class SearchController {
   @Autowired
   private SearchService searchService;
 
-  private String getClientIp() {
-    String ip = request.getHeader("X-Forwarded-For");
-    if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-      ip = request.getHeader("Proxy-Client-IP");
-    }
-    if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-      ip = request.getHeader("WL-Proxy-Client-IP");
-    }
-    if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-      ip = request.getHeader("HTTP_CLIENT_IP");
-    }
-    if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-      ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-    }
-    if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-      ip = request.getRemoteAddr();
-    }
-    return ip;
-  }
+
 
   @GetMapping("query")
   public SearchRespDTO query(
@@ -66,7 +49,7 @@ public class SearchController {
       @RequestParam(value = "p", required = false, defaultValue = "1") Integer page,
       @RequestParam(value = "t", required = false, defaultValue = "ALL") TgRoomTypeParamEnum type) {
 
-    searchLogUtil.log(kw, type.name(), page, getClientIp());
+    searchLogUtil.log(kw, type.name(), page, NetUtil.getClientIp(request));
     return searchService.recall(kw, page, type);
   }
 
@@ -75,7 +58,7 @@ public class SearchController {
           @RequestParam("id") String id,
           @RequestParam(value = "t", required = false, defaultValue = "ALL") TgRoomTypeParamEnum type) {
 
-    searchLogUtil.log(id, type.name(), null, getClientIp());
+    searchLogUtil.log(id, type.name(), null, NetUtil.getClientIp(request));
     return searchService.getById(id, type);
   }
 

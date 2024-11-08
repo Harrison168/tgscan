@@ -47,7 +47,7 @@ public class RoomDocDTO {
     roomDocDTO.setName((String) tgRoomDoc.get("name"));
     roomDocDTO.setJhiDesc((String) tgRoomDoc.get("jhiDesc"));
 
-    roomDocDTO.setSendDate(TimeUtils.getDateTime(Instant.ofEpochSecond((Integer) tgRoomDoc.get("sendTime")), TimeUtils.FORMAT_dd_MM_yyyy, null));
+    roomDocDTO.setSendDate(TimeUtils.getDateTime(Instant.ofEpochMilli((Long) tgRoomDoc.get("sendTime")), TimeUtils.FORMAT_dd_MM_yyyy, null));
 
     return roomDocDTO;
   }

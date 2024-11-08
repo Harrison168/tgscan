@@ -8,7 +8,7 @@ services:
     environment:
       - POSTGRES_USER=demo
       - POSTGRES_PASSWORD=tgscan1024
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_HOST_AUTH_METHOD=md5
     ports:
       - "5432:5432"
 
