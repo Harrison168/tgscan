@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Map;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.util.StringUtils;
@@ -13,6 +14,7 @@ import xyz.tgscan.enums.IdxConstant;
 import xyz.tgscan.utils.StringUtil;
 import xyz.tgscan.utils.TimeUtils;
 
+@Slf4j
 @Data
 @Accessors(chain = true)
 @Document(indexName = IdxConstant.ROOM_IDX, createIndex = false)
@@ -47,7 +49,7 @@ public class RoomDocDTO {
     roomDocDTO.setName((String) tgRoomDoc.get("name"));
     roomDocDTO.setJhiDesc((String) tgRoomDoc.get("jhiDesc"));
 
-    roomDocDTO.setSendDate(TimeUtils.getDateTime(Instant.ofEpochMilli((Long) tgRoomDoc.get("sendTime")), TimeUtils.FORMAT_dd_MM_yyyy, null));
+    roomDocDTO.setSendDate(TimeUtils.getDateTime(Instant.ofEpochMilli( Long.parseLong(tgRoomDoc.get("sendTime")+"")), TimeUtils.FORMAT_dd_MM_yyyy, null));
 
     return roomDocDTO;
   }
