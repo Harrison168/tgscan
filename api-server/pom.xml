@@ -47,11 +47,11 @@
         </dependency>
 
 
-        <dependency>
+        <!--<dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
             <version>7.17.9</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

@@ -38,14 +38,14 @@ public class RoomDocDTO {
 
   private String sendDate;
 
-  public static RoomDocDTO fromTgRoomDoc(Map tgRoomDoc) {
+  public static RoomDocDTO fromTgRoomDoc(Map tgRoomDoc, String icon_url_path) {
     RoomDocDTO roomDocDTO = new RoomDocDTO();
     roomDocDTO.setId(tgRoomDoc.get("id").toString());
     roomDocDTO.setLink((String) tgRoomDoc.get("link"));
     roomDocDTO.setMemberCnt((Integer) tgRoomDoc.get("memberCnt"));
     roomDocDTO.setType((String) tgRoomDoc.get("type"));
     roomDocDTO.setStatus((String) tgRoomDoc.get("status"));
-    roomDocDTO.setIcon((String) tgRoomDoc.get("icon"));
+    roomDocDTO.setIcon((String) icon_url_path + "/" + tgRoomDoc.get("icon"));
     roomDocDTO.setName((String) tgRoomDoc.get("name"));
     roomDocDTO.setJhiDesc((String) tgRoomDoc.get("jhiDesc"));
 

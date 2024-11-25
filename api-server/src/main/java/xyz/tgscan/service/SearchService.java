@@ -42,6 +42,9 @@ public class SearchService {
     @Autowired
     private QueryProcessor queryProcessor;
 
+    @Value("${icon.url.path}")
+    private String icon_url_path;
+
     public SearchService(ElasticsearchClient esClient) {
         this.esClient = esClient;
     }
@@ -194,7 +197,7 @@ public SearchRespDTO getRecommendedRooms(int size, int page) {
                                  * .orElse("")
                                  * .toString())));
                                  */
-                                return RoomDocDTO.fromTgRoomDoc(source);
+                                return RoomDocDTO.fromTgRoomDoc(source, icon_url_path);
                             }
                             if (index.equals(IdxConstant.MESSAGE_IDX)) {
                                 var source = (Map) tgRoomDocHit.source();

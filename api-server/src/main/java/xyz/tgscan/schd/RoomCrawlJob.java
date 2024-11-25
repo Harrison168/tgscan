@@ -30,6 +30,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -43,6 +44,8 @@ import xyz.tgscan.domain.RoomDoc;
 import xyz.tgscan.enums.TgRoomStatusEnum;
 import xyz.tgscan.repository.RoomDocRepository;
 import xyz.tgscan.repository.RoomRepository;
+import xyz.tgscan.service.FileUtils;
+import xyz.tgscan.utils.UrlUtils;
 
 @Component
 @Slf4j
@@ -68,6 +71,12 @@ public class RoomCrawlJob {
   @Value("${crawler.room.enable}")
   private boolean enable;
 
+  @Value("${icon.tgme_icon_group}")
+  private String tgme_icon_group;
+
+  @Value("${icon.tgme_icon_user}")
+  private String tgme_icon_user;
+
   private volatile boolean rescan = false;
   @Autowired
   private RoomRepository roomRepository;
@@ -75,6 +84,9 @@ public class RoomCrawlJob {
   private RoomDocRepository roomDocRepository;
   @Autowired
   private Environment environment;
+
+  @Autowired
+  private FileUtils fileUtils;
 
   public static void main(String[] args) throws IOException {
     var roomCrawlJob = new RoomCrawlJob();
@@ -188,75 +200,96 @@ public class RoomCrawlJob {
 
   private void parseAndSave(Room room, String s) {
     Document doc = Jsoup.parse(s);
-    Optional<String> src = doc
-        .select(
-            "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_photo > a > img")
-        .stream()
-        .findFirst()
-        .map(x -> x.attr("src"));
 
-    String name = doc.select(
-        "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_title > span")
-        .get(0)
-        .text();
-    String desc = null;
+    if (!doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_icon > i.tgme_icon_group").isEmpty()){
+      room.setIcon(tgme_icon_group);
+    } else if (!doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_icon > i.tgme_icon_user").isEmpty()) {
+      room.setIcon(tgme_icon_user);
+    }else{
+      try{
+        Elements iconEl = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_photo > a > img");
+        if (!iconEl.isEmpty()){
+          Optional<String> src = iconEl.stream()
+                  .findFirst()
+                  .map(x -> x.attr("src"));
+          room.setIcon(fileUtils.downloadIcon(src.orElse(""), UrlUtils.getTGIdByUrl(room.getLink())));
+        }
+      }catch(Exception e){
+        log.error("parseAndSave error, downloadIcon fail, roomLink={}", room.getLink(), e);
+      }
+    }
+
     try {
-      desc = doc.select(
-          "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_description")
-          .get(0)
-          .text();
+      Elements nameEl = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_title > span");
+      if (!nameEl.isEmpty()) {
+        String name = nameEl.get(0).text();
+        room.setName(name);
+      }
     } catch (Exception e) {
-      log.error("desc parse err");
+      log.error("parseAndSave error, name parse fail, roomLink={}", room.getLink(), e);
     }
 
-    String statiscs = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_extra")
-        .get(0)
-        .text();
-    room.setName(name);
-    room.setJhiDesc(desc);
-    room.setStatus("COLLECTED");
-    room.setCollectedAt(Timestamp.valueOf(LocalDateTime.now()));
-    room.setIcon(src.orElse(""));
-    boolean isChannel = statiscs.contains("subscriber");
-    if (isChannel) {
-      String subscribers = statiscs.replaceAll("subscribers", "").replaceAll("subscriber", "").replaceAll(" ", "");
-      room.setType("CHANNEL");
-      if (subscribers.equals("no")) {
-        subscribers = "0";
+    try {
+      Elements descEl = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_description");
+      if (!descEl.isEmpty()) {
+        String desc = descEl.get(0).text();
+        room.setJhiDesc(desc);
       }
-      try {
-        room.setMemberCnt(Integer.valueOf(subscribers));
-        var save = roomRepository.save(room);
-        roomDocRepository.save(RoomDoc.fromEntity(save));
-      } catch (NumberFormatException e) {
-        log.info("parse subscriber cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
+
+    } catch (Exception e) {
+      log.error("parseAndSave error, desc parse fail, roomLink={}", room.getLink(), e);
+    }
+
+    Elements statiscsEl = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_extra");
+    if (!statiscsEl.isEmpty()) {
+      String statiscs = statiscsEl.get(0)
+              .text();
+      boolean isChannel = statiscs.contains("subscriber");
+      if (isChannel) {
+        String subscribers = statiscs.replaceAll("subscribers", "").replaceAll("subscriber", "").replaceAll(" ", "");
+        room.setType("CHANNEL");
+        if (subscribers.equals("no")) {
+          subscribers = "0";
+        }
+        try {
+          room.setMemberCnt(Integer.valueOf(subscribers));
+          var save = roomRepository.save(room);
+          roomDocRepository.save(RoomDoc.fromEntity(save));
+        } catch (NumberFormatException e) {
+          log.info("parse subscriber cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
+        }
+      }
+      boolean isGroup = statiscs.contains("member");
+      if (isGroup) {
+        String cnt = statiscs.split("member")[0].replaceAll(" ", "");
+        if (cnt.equals("no")) {
+          cnt = "0";
+        }
+        try {
+          room.setMemberCnt(Integer.valueOf(cnt));
+          room.setType("GROUP");
+          var save = roomRepository.save(room);
+          roomDocRepository.save(RoomDoc.fromEntity(save));
+        } catch (NumberFormatException e) {
+          log.info("parse member cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
+        }
       }
     }
-    boolean isGroup = statiscs.contains("member");
-    if (isGroup) {
-      String cnt = statiscs.split("member")[0].replaceAll(" ", "");
-      if (cnt.equals("no")) {
-        cnt = "0";
-      }
-      try {
-        room.setMemberCnt(Integer.valueOf(cnt));
-        room.setType("GROUP");
-        var save = roomRepository.save(room);
-        roomDocRepository.save(RoomDoc.fromEntity(save));
-      } catch (NumberFormatException e) {
-        log.info("parse member cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
-      }
+
+    Elements maybeBotEl = doc.select("body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_action > a");
+    if(!maybeBotEl.isEmpty()){
+      boolean maybeBot = maybeBotEl.text().contains("Send Message");
+      if (maybeBot) {
+        if (room.getLink().toLowerCase().endsWith("bot")) {
+          room.setType("BOT");
+        } else {
+          room.setType("USER");
+        }
     }
-    boolean maybeBot = doc.select(
-        "body > div.tgme_page_wrap > div.tgme_body_wrap > div > div.tgme_page_action > a")
-        .text()
-        .contains("Send Message");
-    if (maybeBot) {
-      if (room.getLink().toLowerCase().endsWith("bot")) {
-        room.setType("BOT");
-      } else {
-        room.setType("USER");
-      }
+
+
+      room.setStatus("COLLECTED");
+      room.setCollectedAt(Timestamp.valueOf(LocalDateTime.now().withNano(0)));
 
       var save = roomRepository.save(room);
       roomDocRepository.save(RoomDoc.fromEntity(save));
