@@ -10,7 +10,7 @@ root_dir = current_dir.parent.parent
 
 # 根据环境变量选择加载的 .env 文件
 # 环境参数：dev,prod
-ENV = os.getenv('ENVIRONMENT', 'prod')
+ENV = os.getenv("PYTHON_ENV", "dev")  # 从环境变量获取环境名，默认为 'dev'
 dotenv_path = root_dir / f".env.{ENV}"
 
 # 加载对应的 .env 文件

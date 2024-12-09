@@ -1,18 +1,15 @@
 package xyz.tgscan.dto;
 
 import jakarta.persistence.Id;
-
-import java.time.Instant;
-import java.util.Map;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.util.StringUtils;
 import xyz.tgscan.enums.IdxConstant;
-import xyz.tgscan.utils.StringUtil;
 import xyz.tgscan.utils.TimeUtils;
+
+import java.time.Instant;
+import java.util.Map;
 
 @Slf4j
 @Data
@@ -38,6 +35,10 @@ public class RoomDocDTO {
 
   private String sendDate;
 
+  private String lang;
+
+  private String tags;
+
   public static RoomDocDTO fromTgRoomDoc(Map tgRoomDoc, String icon_url_path) {
     RoomDocDTO roomDocDTO = new RoomDocDTO();
     roomDocDTO.setId(tgRoomDoc.get("id").toString());
@@ -50,6 +51,9 @@ public class RoomDocDTO {
     roomDocDTO.setJhiDesc((String) tgRoomDoc.get("jhiDesc"));
 
     roomDocDTO.setSendDate(TimeUtils.getDateTime(Instant.ofEpochMilli( Long.parseLong(tgRoomDoc.get("sendTime")+"")), TimeUtils.FORMAT_dd_MM_yyyy, null));
+
+    roomDocDTO.setLang((String) tgRoomDoc.get("lang"));
+    roomDocDTO.setTags((String) tgRoomDoc.get("tags"));
 
     return roomDocDTO;
   }

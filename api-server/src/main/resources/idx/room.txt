@@ -1,6 +1,6 @@
 
 
-PUT /room.0719
+PUT /room.v2
 {
   "settings": {
     "index": {
@@ -117,7 +117,13 @@ PUT /room.0719
       },
       "sendTime": {
         "type": "date"
-      }
+      },
+        "tags": {
+        "type": "text"
+        },
+       "lang": {
+         "type": "keyword"
+       }
     }
   }
 }
