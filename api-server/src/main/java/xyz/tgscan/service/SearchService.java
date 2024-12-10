@@ -25,6 +25,7 @@ import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import xyz.tgscan.dto.MessageDocDTO;
 import xyz.tgscan.dto.QueryDTO;
 import xyz.tgscan.dto.RoomDocDTO;
@@ -129,18 +130,48 @@ public class SearchService {
     }
 
 @SneakyThrows
-public SearchRespDTO getRecommendedRooms(int size, int page) {
+public SearchRespDTO getRecommendedRooms(int size, int page, List<String> userTags) {
     // Create bool query to filter COLLECTED rooms
     var boolQuery = BoolQuery.of(b -> b
             .must(TermQuery.of(m -> m.field(IdxConstant.ROOM_STATUS).value(TgRoomStatusEnum.COLLECTED.name()))._toQuery()))._toQuery();
 
+    Query combinedQuery;
+    if (CollectionUtils.isEmpty(userTags)){
+        // Combine tagsQuery and boolQuery into a single query
+        combinedQuery = BoolQuery.of(b -> b
+                .must(boolQuery) // Base condition
+        )._toQuery();
+    }else{
+        String userTagsQuery = String.join(" ", userTags);
+        var tagsQuery = MatchQuery.of(m -> m
+                .field("tags") // The tags field in your index
+                .query(userTagsQuery) // Match the user-provided tags
+        )._toQuery();
+
+        // Combine tagsQuery and boolQuery into a single query
+        combinedQuery = BoolQuery.of(b -> b
+                .must(boolQuery) // Base condition
+                .must(tagsQuery)
+        )._toQuery();
+    }
+
     // Calculate the offset for pagination
     var from = (page - 1) * size;
+
+    // Build the function_score query
+    var functionScoreQuery = FunctionScoreQuery.of(f -> f
+            .query(combinedQuery) // Base query
+            .functions(fn -> fn
+                    .randomScore(rs -> rs.seed(System.currentTimeMillis()+"") // Use current time as seed for randomness
+                    )
+            )
+            .boostMode(FunctionBoostMode.Replace) // Replace base score with random score
+    )._toQuery();
 
     // Create a builder to build the search request
     Function<SearchRequest.Builder, ObjectBuilder<SearchRequest>> builder = s -> s
             .index(IdxConstant.ROOM_IDX)
-            .query(boolQuery)
+            .query(functionScoreQuery)
             .size(size)
             .from(from)
             .sort(sort -> sort.field(f -> f.field("_score").order(SortOrder.Desc)))
@@ -221,6 +252,10 @@ public SearchRespDTO getRecommendedRooms(int size, int page) {
                         })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+
+        if (totalPage > IdxConstant.MAX_PAGE){
+            totalPage = IdxConstant.MAX_PAGE;
+        }
         return new SearchRespDTO(totalPage, docs);
     }
 

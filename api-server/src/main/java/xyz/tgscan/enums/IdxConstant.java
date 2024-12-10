@@ -21,4 +21,5 @@ public class IdxConstant {
 
   public static final int PAGE_SIZE = 5;
   public static final int HOME_RECOM_PAGE_SIZE = 12;
+  public static final int MAX_PAGE = 100;
 }

@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import xyz.tgscan.domain.Offsets;
 import xyz.tgscan.dto.*;
+import xyz.tgscan.dto.requests.RecommendRequest;
+import xyz.tgscan.enums.IdxConstant;
 import xyz.tgscan.enums.TgRoomTypeParamEnum;
 import xyz.tgscan.service.SearchService;
 import xyz.tgscan.utils.NetUtil;
@@ -100,8 +102,12 @@ public class SearchController {
   }
 
 
-  @GetMapping("recommend")
-  public SearchRespDTO getRecommendedRooms(@RequestParam(value = "p", required = false, defaultValue = "1") Integer page) {
-    return searchService.getRecommendedRooms(HOME_RECOM_PAGE_SIZE, page);
+  @PostMapping("recommend")
+  public SearchRespDTO getRecommendedRooms(@RequestBody RecommendRequest request) {
+    if (request.getPage() == null){
+      request.setPage(1);
+    }
+
+    return searchService.getRecommendedRooms(HOME_RECOM_PAGE_SIZE, request.getPage(), request.getUserTags());
   }
 }
