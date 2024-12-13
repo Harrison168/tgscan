@@ -2,10 +2,7 @@ package xyz.tgscan.schd;
 
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.rholder.retry.RetryException;
-import com.github.rholder.retry.Retryer;
-import com.github.rholder.retry.RetryerBuilder;
-import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.*;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import jakarta.annotation.PostConstruct;
 import java.io.FileOutputStream;
@@ -55,15 +52,16 @@ public class RoomCrawlJob {
   private static final String PROXY_URL = "https://tq.lunaproxy.com/getflowip?neek=1029717&num=50&type=2&sep=1&regions=all&ip_si=1&level=1&sb=";
   private final Retryer<String> retryer = RetryerBuilder.<String>newBuilder()
       .retryIfExceptionOfType(IOException.class)
-      .withStopStrategy(StopStrategies.stopAfterAttempt(5))
+      .withStopStrategy(StopStrategies.stopAfterAttempt(3))
+        .withWaitStrategy(WaitStrategies.fixedWait(2, TimeUnit.SECONDS))
       .build();
   private final CloseableHttpClient client = HttpClients.custom().setMaxConnTotal(50).build();
   private final ThreadLocal<String> proxyWrap = new ThreadLocal<>();
   private final ThreadPoolExecutor pool = new ThreadPoolExecutor(
-      150,
-      150,
-      0L,
-      TimeUnit.MILLISECONDS,
+          1,
+      2,
+        60L,
+      TimeUnit.SECONDS,
       new ArrayBlockingQueue<>(1024),
       new ThreadFactoryBuilder().setNameFormat("crawler-%d").build(),
       new ThreadPoolExecutor.CallerRunsPolicy());
@@ -90,7 +88,7 @@ public class RoomCrawlJob {
 
   public static void main(String[] args) throws IOException {
     var roomCrawlJob = new RoomCrawlJob();
-    var url = "https://t.me/sgnoogle_fan";
+    var url = "https://t.me/hersj5";
     var room = new Room().setLink(url);
     var room1 = room;
     roomCrawlJob.fetch(room1);
@@ -189,7 +187,7 @@ public class RoomCrawlJob {
   }
 
   private void fetch(Room room) {
-    String s = download(room);
+      String s = download(room);
     try {
       parseAndSave(room, s);
     } catch (Exception e) {
@@ -253,10 +251,10 @@ public class RoomCrawlJob {
         }
         try {
           room.setMemberCnt(Integer.valueOf(subscribers));
-          var save = roomRepository.save(room);
-          roomDocRepository.save(RoomDoc.fromEntity(save));
+//          var save = roomRepository.save(room);
+//          roomDocRepository.save(RoomDoc.fromEntity(save));
         } catch (NumberFormatException e) {
-          log.info("parse subscriber cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
+          log.error("parse subscriber cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
         }
       }
       boolean isGroup = statiscs.contains("member");
@@ -268,10 +266,10 @@ public class RoomCrawlJob {
         try {
           room.setMemberCnt(Integer.valueOf(cnt));
           room.setType("GROUP");
-          var save = roomRepository.save(room);
-          roomDocRepository.save(RoomDoc.fromEntity(save));
+//          var save = roomRepository.save(room);
+//          roomDocRepository.save(RoomDoc.fromEntity(save));
         } catch (NumberFormatException e) {
-          log.info("parse member cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
+          log.error("parse member cnt err, room:{}, err:{}", JSON.toJSONString(room), e.getMessage());
         }
       }
     }
@@ -284,16 +282,20 @@ public class RoomCrawlJob {
           room.setType("BOT");
         } else {
           room.setType("USER");
+          // type为USER时，可能是加载网页限流，无需保存数据
+          log.error("Room load error, room type is USER, link={}", room.getLink());
+          return;
         }
+      }
     }
 
 
-      room.setStatus("COLLECTED");
-      room.setCollectedAt(Timestamp.valueOf(LocalDateTime.now().withNano(0)));
+    room.setStatus("COLLECTED");
+    room.setCollectedAt(Timestamp.valueOf(LocalDateTime.now().withNano(0)));
 
-      var save = roomRepository.save(room);
-      roomDocRepository.save(RoomDoc.fromEntity(save));
-    }
+    var save = roomRepository.save(room);
+    roomDocRepository.save(RoomDoc.fromEntity(save));
+
   }
 
   private String download(Room room) {
@@ -363,7 +365,7 @@ public class RoomCrawlJob {
       pool.submit(
           () -> {
             try {
-
+              TimeUnit.MILLISECONDS.sleep(200);
               log.debug("start fetch:{}", room.getLink());
               fetch(room);
               log.info("end fetch:{}", room.getLink());
@@ -380,7 +382,7 @@ public class RoomCrawlJob {
     }
   }
 
-  @Scheduled(fixedDelay = 10000)
+  @Scheduled(fixedDelay = 60*60*1000)
   public void run() {
     if (!enable) {
       return;

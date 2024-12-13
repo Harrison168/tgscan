@@ -36,7 +36,17 @@ class UpdateRoomTags:
             scroll=scroll,
             size=self.page_size,  # 每页文档数
             body={
-                "query": {"match_all": {}}
+                "query": {
+                    "bool": {
+                        "must": [
+                            # {"match_all": {}}
+                            {"exists": {"field": "jhiDesc"}}
+                        ],
+                        "must_not": [
+                            {"exists": {"field": "tags"}}  # 查询没有 tags 字段的文档
+                        ]
+                    }
+                }
             }
         )
 
@@ -45,6 +55,7 @@ class UpdateRoomTags:
         hits = result["hits"]["hits"]
 
         while hits:
+            print(f"fetch_all_documents, hits.size={len(hits)}")
             for doc in hits:
                 yield doc  # 返回文档
 
@@ -88,7 +99,7 @@ class UpdateRoomTags:
                 "doc": source
             })
 
-            # 每 1000 条提交一次
+            # 每 page_size 条提交一次
             if len(actions) >= self.page_size:
                 bulk(self.es, actions)
                 actions = []
@@ -104,7 +115,7 @@ class UpdateRoomTags:
 index_name = 'room.v2'
 if __name__ == "__main__":
     print(f"Starting UpdateRoomTags task, start_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    crawler = UpdateRoomTags(index_name, 100)
+    crawler = UpdateRoomTags(index_name, 500)
     crawler.bulk_update()
 
     print(f"Finished UpdateRoomTags task, end_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
