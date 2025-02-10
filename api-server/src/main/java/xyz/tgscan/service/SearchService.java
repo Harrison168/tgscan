@@ -130,7 +130,7 @@ public class SearchService {
     }
 
 @SneakyThrows
-public SearchRespDTO getRecommendedRooms(int size, int page, List<String> userTags) {
+public SearchRespDTO getRecommendedRooms(int size, int page, List<String> userTags, String lang) {
     // Create bool query to filter COLLECTED rooms
     var boolQuery = BoolQuery.of(b -> b
             .must(TermQuery.of(m -> m.field(IdxConstant.ROOM_STATUS).value(TgRoomStatusEnum.COLLECTED.name()))._toQuery()))._toQuery();
@@ -162,9 +162,13 @@ public SearchRespDTO getRecommendedRooms(int size, int page, List<String> userTa
     var functionScoreQuery = FunctionScoreQuery.of(f -> f
             .query(combinedQuery) // Base query
             .functions(fn -> fn
+//                    .filter(q -> q
+//                            .term(t -> t.field("lang").value(lang)) // 针对语言 "en"
+//                    ).weight(2.0) // 权重提升
                     .randomScore(rs -> rs.seed(System.currentTimeMillis()+"") // Use current time as seed for randomness
                     )
             )
+            .scoreMode(FunctionScoreMode.Sum) // Sum base score with random score
             .boostMode(FunctionBoostMode.Replace) // Replace base score with random score
     )._toQuery();
 

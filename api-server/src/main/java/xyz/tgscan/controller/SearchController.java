@@ -15,6 +15,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import xyz.tgscan.domain.Offsets;
 import xyz.tgscan.dto.*;
@@ -25,6 +26,7 @@ import xyz.tgscan.service.SearchService;
 import xyz.tgscan.utils.NetUtil;
 import xyz.tgscan.utils.RoomLinksUtil;
 import xyz.tgscan.utils.SearchLogUtil;
+import xyz.tgscan.utils.StringUtil;
 
 import static xyz.tgscan.enums.IdxConstant.HOME_RECOM_PAGE_SIZE;
 
@@ -107,7 +109,10 @@ public class SearchController {
     if (request.getPage() == null){
       request.setPage(1);
     }
+    if (StringUtils.hasLength(request.getLang())){
+      request.setLang(IdxConstant.DEFAULT_LANG);
+    }
 
-    return searchService.getRecommendedRooms(HOME_RECOM_PAGE_SIZE, request.getPage(), request.getUserTags());
+    return searchService.getRecommendedRooms(HOME_RECOM_PAGE_SIZE, request.getPage(), request.getUserTags(), request.getLang());
   }
 }

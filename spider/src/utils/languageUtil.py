@@ -21,6 +21,8 @@ class LanguageUtil:
         self.language_detector = text.LanguageDetector.create_from_options(language_detector_options)
 
 
+
+    # Detect language from the input text string, result ISO 639-1
     def detect_language(self, text):
         language_code = "en"
         detection_result = self.language_detector.detect(text)

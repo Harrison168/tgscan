@@ -8,3 +8,4 @@ hanlp[full]==2.1.0b62
 elasticsearch==7.17
 mediapipe==0.10.18
 scikit-learn==1.5.1
+beautifulsoup4==4.12.3

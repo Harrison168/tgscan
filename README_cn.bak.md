@@ -4,7 +4,7 @@
 
 </h1>
 <p align="center" style="margin-top: 20px">
-  <a href="README.md">English</a>
+  <a href="README.bak.md">English</a>
   <span> | </span>
   <span >中文</span>
 </p>

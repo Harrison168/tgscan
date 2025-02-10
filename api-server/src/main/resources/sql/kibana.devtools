@@ -1,0 +1,72 @@
+GET room.v2/_search
+{
+  "from": 0,            // 指定起始位置
+  "size": 10,           // 每页显示的文档数量
+  "query": {
+    "match_all": {}     // 查询所有文档
+  },
+  "sort": [
+    {
+      "memberCnt": "desc"
+    }
+  ]
+}
+
+GET room.v2/_search
+{
+  "from": 0,            // 指定起始位置
+  "size": 10,           // 每页显示的文档数量
+  "query": {
+    "match": {
+      "link": "https://t.me/hersj5"
+    }
+  }
+}
+
+GET /room.v2/_search
+{
+  "query": {
+    "exists": {
+      "field": "tags"
+    }
+  }
+}
+
+
+GET room.v2/_search
+{
+  "from": 0,            // 指定起始位置
+  "size": 10,           // 每页显示的文档数量
+  "query": {
+    "bool": {
+        "must_not": {
+            "exists": {
+                "field": "jhiDesc"
+            }
+        }
+    }
+  }
+}
+
+
+GET /room.v2/_count
+{
+  "query": {
+    "exists": {
+      "field": "tags"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

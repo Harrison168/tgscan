@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+# Telghub 爬取任务
+import os
+from datetime import datetime
+
+import requests
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from subprocess import CREATE_NO_WINDOW
+
+from selenium.webdriver.common.by import By
+from spider.src.utils.pgHelper import PgHelper
+from spider.src.models.room_v2 import (
+    INSERT_ROOM_QUERY,
+    CHECK_ROOM_EXISTS_QUERY,
+    prepare_room_data
+)
+
+from spider.src.utils import Utils
+
+
+class TgramAutoCrawler:
+
+
+    def __init__(self):
+        self.db = PgHelper()
+        self.batch_size = 100  # Define a batch size
+        self.items_batch = []  # Initialize a list to store items
+        self.debugger_port = 10000
+        self.chrome_driver_dir = 'C:\\Users\\1\\.wdm\\drivers\\chromedriver\\win64\\131.0.6778.87\\chromedriver-win32\\chromedriver.exe'
+
+        self.browser = self.startChromeListen()
+
+    def startChromeListen(self):
+        user_data_dir = Utils.data_dir + '\\chrome\\' + str(self.debugger_port)
+        chrome_launch = ('start chrome --remote-debugging-port={} --start-maximized --user-data-dir="{}" --disable-popup-blocking'
+                         .format(str(self.debugger_port), user_data_dir))
+        os.system(chrome_launch)
+        time.sleep(5)
+
+        service = Service(executable_path=self.chrome_driver_dir, service_args=["--verbose", "--log-path=chromedriver.log"])
+        service.creation_flags = CREATE_NO_WINDOW
+        options = Options()
+        options.add_experimental_option("debuggerAddress", "localhost:"+str(self.debugger_port))
+        # options.add_argument('--headless')
+        return webdriver.Chrome(service=service, options=options)
+
+    def fetch_telegram_data(self, page=1):
+            self.browser.get(f'https://tgram.io/?lang=&page={page}')
+            time.sleep(5)
+
+            group_list_div = self.browser.find_elements(By.XPATH, "//div[@id='group-list']")
+            cards = group_list_div[0].find_elements(By.CLASS_NAME, "card-block")
+            data_list = []
+            for card in cards:
+                try:
+                    # 提取所需数据
+                    name = card.find_element(By.CSS_SELECTOR, "h3.h6 a").text
+                    room_id = card.find_element(By.CSS_SELECTOR, "h3.h6 a").get_attribute("href").split("/")[-1]
+                    link = f"https://t.me/{room_id}"
+                    lang = card.find_element(By.CSS_SELECTOR, ".fa-info-circle").text.split()[-1]
+                    member_count = int(card.find_element(By.CSS_SELECTOR, ".fa-user").text.replace(",", ""))
+                    description = card.find_element(By.CSS_SELECTOR, ".text-muted.small").text
+                    icon = card.find_element(By.CSS_SELECTOR, "img").get_attribute("src")
+
+                    # 存储到列表
+                    data_list.append({
+                        "room_id": room_id,
+                        "link": link,
+                        "name": name,
+                        "description": description,
+                        "member_count": member_count,
+                        "lang": lang,
+                        "icon": icon
+                    })
+
+                except Exception as e:
+                    print(f"Error processing card: {e}")
+            return data_list
+
+
+
+    def process_item(self, item):
+        if isinstance(item, dict):
+            self.items_batch.append(item)
+            if len(self.items_batch) >= self.batch_size:
+                self.process_batch()
+        else:
+            print(f"Unexpected item type: {type(item)}. Expected dict, got {item}")
+
+    def process_batch(self):
+        links = [item.get('link') for item in self.items_batch]
+        existing_links = self.check_rooms_exist(links)
+
+        new_items = [item for item in self.items_batch if item.get('link') not in existing_links]
+        if new_items:
+            print(f"Found new rooms: count={len(new_items)}")
+            self.insert_rooms(new_items)
+
+        self.items_batch = []  # Clear the batch after processing
+
+    def check_rooms_exist(self, links):
+        result = self.db.execute_query(CHECK_ROOM_EXISTS_QUERY, (tuple(links),))
+        if result:
+            print(f"Rooms already exists: count={len(result)}")
+            return set(item[0] for item in result)
+        else:
+            return set()
+
+    def insert_rooms(self, items):
+        data = [prepare_room_data(item) for item in items]
+        self.db.execute_batch_insert(INSERT_ROOM_QUERY, data)
+
+
+    def crawl_all_pages(self):
+        page = 2237
+        while True:
+            print(f"Fetching {self.pagetype} page {page}")
+            has_more_data = self.fetch_telghub_data(page=page, list_rows=DEFAULT_LIST_ROWS)
+            if not has_more_data:
+                break
+            page += 1
+            time.sleep(5)  # Wait for 5 seconds between requests
+
+        # Process any remaining items in the batch
+        if self.items_batch:
+            self.process_batch()
+
+    def daily_task(self):
+        print(f"Starting daily Telghub crawl task, start_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self.crawl_all_pages()
+        print(f"Finished daily Telghub crawl task, end_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    def close(self):
+        self.db.close()
+
+def run_daily_task():
+    crawler = TgramAutoCrawler()
+    crawler.daily_task()
+    crawler.close()
+
+
+
+DEFAULT_LIST_ROWS = 100
+# PAGETYPE_LIST = ['new','member_top']
+PAGETYPE_LIST = ['member_top']
+if __name__ == "__main__":
+    # schedule.every().day.at("02:00").do(run_daily_task)  # Run daily at 2 AM
+
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(60)  # Check every minute
+
+    run_daily_task()

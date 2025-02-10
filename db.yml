@@ -7,7 +7,7 @@ services:
       - ./pg:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=demo
-      - POSTGRES_PASSWORD=tgscan1024
+      - POSTGRES_PASSWORD=tgscan2024
       - POSTGRES_HOST_AUTH_METHOD=md5
     ports:
       - "5432:5432"
@@ -20,7 +20,11 @@ services:
       - "cluster.name=elasticsearch"
       - "discovery.type=single-node"
       - "ES_JAVA_OPTS=-Xms2G -Xmx2G"
-      - bootstrap.memory_lock=true
+      - "bootstrap.memory_lock=true"
+      - "xpack.security.enabled=true"  # 启用认证
+      - "ELASTIC_PASSWORD=Jw8#fT1@qZ$9pXrM&6vK"  # 设置 elastic 用户密码
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -31,6 +35,12 @@ services:
     depends_on:
       - elasticsearch
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=Jw8#fT1@qZ$9pXrM&6vK  # Kibana 连接 Elasticsearch 的凭据
     ports:
       - "5601:5601"
+
+volumes:
+  elasticsearch_data:
+    driver: local

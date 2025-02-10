@@ -15,26 +15,35 @@
 
 ### TelghubAutoCrawler
 TelghubAutoCrawler是用于爬取Telghub平台数据的爬虫。运行方法如下：
-
 ```
 CMD进入spider同级目录：  
 python -m spider.src.TelghubAutoCrawler
 ```
-这个爬虫会自动连接Telghub平台，根据配置的参数抓取指定的TG群组数据。  
+
 ### CombotAutoCrawler
 CombotAutoCrawler是用于爬取Combot平台数据的爬虫。运行方法如下：
-
 ```
 CMD进入spider同级目录：  
 python -m spider.src.CombotAutoCrawler
 ```
-这个爬虫会自动连接Combot平台，根据配置的参数抓取指定的TG群组数据。
 
-### UpdateRoomTags
+### TgramApiAutoCrawler
+TgramAutoCrawler是用于爬取tgram.io平台数据的爬虫。运行方法如下：
+```
+CMD进入spider同级目录：  
+python -m spider.src.TgramApiAutoCrawler
+```
+
+## UpdateRoomTags
 UpdateRoomTags是用于自动化打标签。运行方法如下：
-
 ```
 CMD进入spider同级目录：  
 python -m spider.src.UpdateRoomTags
 ```
 
+## TgstatAutoCrawler
+TgstatAutoCrawler运行方法如下：
+```
+CMD进入spider同级目录：  
+python -m spider.src.TgstatAutoCrawler
+```

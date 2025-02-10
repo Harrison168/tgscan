@@ -19,10 +19,12 @@ class UpdateRoomTags:
     def __init__(self, index_name, page_size):
         # 初始化 Elasticsearch 客户端
         es_host_url = os.getenv('ES_HOST_URL')
+        es_username = os.getenv('ES_USERNAME')
+        es_password = os.getenv('ES_PASSWORD')
         print(es_host_url)
         self.es = Elasticsearch(
             hosts=[es_host_url],  # 替换为你的 Elasticsearch 地址
-            # http_auth=("username", "password")  # 如果需要身份验证
+            http_auth=(es_username, es_password)  # 如果需要身份验证
         )
         self.index_name = index_name
         self.languageUtil = LanguageUtil()
@@ -115,7 +117,7 @@ class UpdateRoomTags:
 index_name = 'room.v2'
 if __name__ == "__main__":
     print(f"Starting UpdateRoomTags task, start_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    crawler = UpdateRoomTags(index_name, 500)
+    crawler = UpdateRoomTags(index_name, 200)
     crawler.bulk_update()
 
     print(f"Finished UpdateRoomTags task, end_time={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
